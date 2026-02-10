@@ -32,11 +32,23 @@ blueprint:
             - manufacturer: *mfctr2
               <<: *flt-hue2
             - manufacturer: *mfctr1
+              <<: &flt-hue3
+                integration: hue
+                model: "Hue Smart button (RDM005)"
+            - manufacturer: *mfctr2
+              <<: *flt-hue3
+            - manufacturer: *mfctr1
               <<: &flt-zha
                 integration: zha
                 model: "ROM001"
             - manufacturer: *mfctr2
               <<: *flt-zha
+            - manufacturer: *mfctr1
+              <<: &flt-zha2
+                integration: zha
+                model: "RDM005"
+            - manufacturer: *mfctr2
+              <<: *flt-zha2
     controller_topic:
       name: (Zigbee2MQTT) Button `/action` Topic
       description: The MQTT topic to use for the automation (only fill if using Zigbee2MQTT)
