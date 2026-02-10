@@ -1,4 +1,5 @@
 # Blueprint metadata
+# Based on original blueprint by The Holy Roger (https://github.com/TheHolyRoger/THR_HA_Blueprints/)
 blueprint:
   name: HUE Smarter Button (Multi-press)
   description: |
