@@ -96,5 +96,5 @@ variables:
   restart_after_renewal_var: !input restart_after_renewal
   send_notification_var: !input send_notification
   expire_days_var: >-
-    {{ ((as_timestamp(states(certificate_var), 0) - as_timestamp(now())) / 60 / 60 /
-    24 ) | int }}
+    {% set ts = as_timestamp(states(certificate_var), none) %}
+    {{ ((ts - as_timestamp(now())) / 86400) | int if ts is not none else 999 }}
