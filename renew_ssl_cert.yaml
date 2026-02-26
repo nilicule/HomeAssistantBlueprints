@@ -60,7 +60,7 @@ trigger:
     at: !input time_to_check_cert
 condition:
   - condition: template
-    value_template: '{{ expire_days_var < var_check }}'
+    value_template: '{{ expire_days_var | int < var_check }}'
 action:
   - service: hassio.addon_start
     data:
