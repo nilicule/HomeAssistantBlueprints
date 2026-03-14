@@ -115,7 +115,7 @@ blueprint:
           description: |
             For scroll wheel mode <user defined> only
             Exposed variables:
-            - <scroll_clicks>: always 1 per scroll tick (both modes)
+            - <scroll_clicks>: always 1 per scroll tick (one step per event)
             - <scroll_direction>: 'left' or 'right'
           default: []
           selector:
@@ -212,7 +212,7 @@ blueprint:
           description: |
             For scroll wheel mode <user defined> only
             Exposed variables:
-            - <scroll_clicks>: always 1 per scroll tick (both modes)
+            - <scroll_clicks>: always 1 per scroll tick (one step per event)
             - <scroll_direction>: 'left' or 'right'
           default: []
           selector:
@@ -310,7 +310,7 @@ blueprint:
           description: |
             For scroll wheel mode <user defined> only
             Exposed variables:
-            - <scroll_clicks>: always 1 per scroll tick (both modes)
+            - <scroll_clicks>: always 1 per scroll tick (one step per event)
             - <scroll_direction>: 'left' or 'right'
           default: []
           selector:
@@ -608,7 +608,7 @@ action:
             value_template: >
               {{ ( (vars['scroll_wheel_mode_ext_' ~ channel] == 'relaxed') and 
                    (trigger.id == ('scroll_left_' ~ channel) or trigger.id == ('scroll_right_' ~ channel)) and
-                   trigger.event.data.new_state.attributes.event_type in ['multi_press_1', 'multi_press_2', 'multi_press_3', 'multi_press_ongoing']
+                   trigger.event.data.new_state.attributes.event_type is match('multi_press_\\d+')
                  ) or
                  ( (vars['scroll_wheel_mode_ext_' ~ channel] == 'instant') and 
                    (trigger.id == ('scroll_left_ext_' ~ channel) or trigger.id == ('scroll_right_ext_' ~ channel)) and 
