@@ -1,0 +1,125 @@
+blueprint:
+  name: Battery Monitor
+  description: |
+    Automatically detects all battery sensors, tracks which are below a threshold,
+    sends mobile push notifications, and updates a dashboard badge with the list of
+    low battery sensors.
+
+    SETUP — Create the badge helper first:
+    1. Go to Settings > Devices & Services > Helpers > Add Helper > Text
+    2. Name it "Low Battery Sensors" (or similar)
+    3. Set Max length to 255
+    4. Select it as the "Badge Helper" input below.
+
+    DASHBOARD BADGE — After creating the automation:
+    1. Open your dashboard in edit mode
+    2. Add a badge and select the input_text helper you created
+    The badge will display the names of low battery sensors (e.g. "Remote: 15%, Sensor: 8%"),
+    or "OK" when all batteries are fine.
+  domain: automation
+  input:
+    battery_threshold:
+      name: Battery Threshold
+      description: Batteries below this percentage will trigger alerts.
+      default: 20
+      selector:
+        number:
+          min: 1
+          max: 100
+          step: 1
+          unit_of_measurement: "%"
+          mode: slider
+    excluded_batteries:
+      name: Excluded Batteries
+      description: Battery sensors to skip when checking for low batteries.
+      default: []
+      selector:
+        entity:
+          multiple: true
+          filter:
+            - device_class: battery
+    notification_device:
+      name: Notification Device
+      description: Mobile device to send push notifications to.
+      selector:
+        device:
+          integration: mobile_app
+    badge_helper:
+      name: Badge Helper
+      description: An input_text helper that will display the names of low battery sensors.
+      selector:
+        entity:
+          filter:
+            - domain: input_text
+
+variables:
+  battery_threshold_var: !input battery_threshold
+  excluded_batteries_var: !input excluded_batteries
+  notification_device_var: !input notification_device
+  badge_helper_var: !input badge_helper
+
+  notify_service: >-
+    notify.mobile_app_{{ device_attr(notification_device_var, 'name') | slugify }}
+
+  low_batteries: >-
+    {% set excluded = excluded_batteries_var if excluded_batteries_var is iterable and excluded_batteries_var is not string else [excluded_batteries_var] %}
+    {% set threshold = battery_threshold_var | float %}
+    {% set ns = namespace(batteries=[]) %}
+    {% for s in states.sensor %}
+      {% if s.attributes.get('device_class') == 'battery'
+         and s.entity_id not in excluded
+         and s.state not in ['unavailable', 'unknown', 'none', '']
+         and s.state | float(-1) >= 0
+         and s.state | float(-1) < threshold %}
+        {% set ns.batteries = ns.batteries + [s.entity_id] %}
+      {% endif %}
+    {% endfor %}
+    {{ ns.batteries }}
+
+  low_battery_count: "{{ low_batteries | length }}"
+
+  low_battery_message: >-
+    {% set ns = namespace(lines=[]) %}
+    {% for entity_id in low_batteries %}
+      {% set friendly = state_attr(entity_id, 'friendly_name') | default(entity_id, true) %}
+      {% set pct = states(entity_id) %}
+      {% set ns.lines = ns.lines + [friendly + ': ' + pct + '%'] %}
+    {% endfor %}
+    {{ ns.lines | join('\n') }}
+
+  badge_text: >-
+    {% if low_batteries | length == 0 %}
+    OK
+    {% else %}
+      {% set ns = namespace(parts=[]) %}
+      {% for entity_id in low_batteries %}
+        {% set friendly = state_attr(entity_id, 'friendly_name') | default(entity_id, true) %}
+        {% set pct = states(entity_id) %}
+        {% set ns.parts = ns.parts + [friendly + ': ' + pct + '%'] %}
+      {% endfor %}
+      {{ ns.parts | join(', ') | truncate(255, True, '…') }}
+    {% endif %}
+
+trigger:
+  - platform: homeassistant
+    event: start
+  - platform: time_pattern
+    hours: "/1"
+
+action:
+  - service: input_text.set_value
+    target:
+      entity_id: !input badge_helper
+    data:
+      value: "{{ badge_text }}"
+
+  - if:
+      - condition: template
+        value_template: "{{ low_battery_count | int > 0 }}"
+    then:
+      - service: "{{ notify_service }}"
+        data:
+          title: "Low Battery Alert ({{ low_battery_count }} device{{ 's' if low_battery_count | int > 1 else '' }})"
+          message: "{{ low_battery_message }}"
+
+mode: single
