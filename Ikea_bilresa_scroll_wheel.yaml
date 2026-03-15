@@ -1,8 +1,10 @@
 # Patch by Remco Brink <remco@brink.st>
 #
-# Fix 1 — Scroll condition now explicitly allows multi_press_ongoing
-# Fix 2 — scroll_clicks defaults to 1 for multi_press_ongoing
-#         If you want coarser control you can tune the dim_step_pct / volume_step_pct global settings to compensate
+# Fix 1 — Scroll condition accepts any multi_press_N via regex (multi_press_1..8)
+# Fix 2 — scroll_clicks is always 1 per event (one dim step per scroll tick)
+# Fix 3 — Long-press hold loop: capped at 20 iterations + 3s staleness timeout
+#          to prevent queued automation slots filling up and freezing the device
+# Fix 4 — Reduced default max_queued_automation_calls from 10 to 3
 #
 blueprint:
   name: Ikea_bilresa_scroll_wheel
@@ -115,7 +117,7 @@ blueprint:
           description: |
             For scroll wheel mode <user defined> only
             Exposed variables:
-            - <scroll_clicks>: for <instant> mode always 1, for <relaxed> mode number between 1 to 8
+            - <scroll_clicks>: always 1 per scroll tick (one step per event)
             - <scroll_direction>: 'left' or 'right'
           default: []
           selector:
@@ -212,7 +214,7 @@ blueprint:
           description: |
             For scroll wheel mode <user defined> only
             Exposed variables:
-            - <scroll_clicks>: for <instant> mode always 1, for <relaxed> mode number between 1 to 8
+            - <scroll_clicks>: always 1 per scroll tick (one step per event)
             - <scroll_direction>: 'left' or 'right'
           default: []
           selector:
@@ -310,7 +312,7 @@ blueprint:
           description: |
             For scroll wheel mode <user defined> only
             Exposed variables:
-            - <scroll_clicks>: for <instant> mode always 1, for <relaxed> mode number between 1 to 8
+            - <scroll_clicks>: always 1 per scroll tick (one step per event)
             - <scroll_direction>: 'left' or 'right'
           default: []
           selector:
@@ -412,7 +414,7 @@ blueprint:
           name: Max queued automation calls
           description: |
             Increase if you want to queue more automation calls for special cases
-          default: 10
+          default: 3
           selector:
             number:
               mode: box
@@ -580,49 +582,56 @@ action:
               sequence:
                 - sequence: !input long_click_action_ch1
                 - repeat:
-                    while: "{{ repeat.index < 100 and state_attr(var_button_ch1, 'event_type') == 'long_press' }}"
+                    while: >-
+                      {{ repeat.index < 20
+                         and state_attr(var_button_ch1, 'event_type') == 'long_press'
+                         and states[var_button_ch1].last_changed > (now() - timedelta(seconds=3))
+                      }}
                     sequence:
-                    - sequence: !input on_hold_action_ch1
-                    - delay: "{{ var_on_hold_delay }}"
+                      - sequence: !input on_hold_action_ch1
+                      - delay: "{{ var_on_hold_delay }}"
           - if: "{{ channel == 'ch2'}}"
             then:
               sequence:
                 - sequence: !input long_click_action_ch2
                 - repeat:
-                    while: "{{ repeat.index < 100 and state_attr(var_button_ch2, 'event_type') == 'long_press' }}"
+                    while: >-
+                      {{ repeat.index < 20
+                         and state_attr(var_button_ch2, 'event_type') == 'long_press'
+                         and states[var_button_ch2].last_changed > (now() - timedelta(seconds=3))
+                      }}
                     sequence:
-                    - sequence: !input on_hold_action_ch2
-                    - delay: "{{ var_on_hold_delay }}"
+                      - sequence: !input on_hold_action_ch2
+                      - delay: "{{ var_on_hold_delay }}"
           - if: "{{ channel == 'ch3'}}"
             then:
               sequence:
                 - sequence: !input long_click_action_ch3
                 - repeat:
-                    while: "{{ repeat.index < 100 and state_attr(var_button_ch3, 'event_type') == 'long_press' }}"
+                    while: >-
+                      {{ repeat.index < 20
+                         and state_attr(var_button_ch3, 'event_type') == 'long_press'
+                         and states[var_button_ch3].last_changed > (now() - timedelta(seconds=3))
+                      }}
                     sequence:
-                    - sequence: !input on_hold_action_ch3
-                    - delay: "{{ var_on_hold_delay }}"
+                      - sequence: !input on_hold_action_ch3
+                      - delay: "{{ var_on_hold_delay }}"
       # scroll wheel actions
       - conditions:
           - condition: template
             value_template: >
               {{ ( (vars['scroll_wheel_mode_ext_' ~ channel] == 'relaxed') and 
                    (trigger.id == ('scroll_left_' ~ channel) or trigger.id == ('scroll_right_' ~ channel)) and
-                   trigger.event.data.new_state.attributes.event_type in ['multi_press_1', 'multi_press_2', 'multi_press_3', 'multi_press_ongoing']
+                   trigger.event.data.new_state.attributes.event_type is match('multi_press_\\d+')
                  ) or
                  ( (vars['scroll_wheel_mode_ext_' ~ channel] == 'instant') and 
                    (trigger.id == ('scroll_left_ext_' ~ channel) or trigger.id == ('scroll_right_ext_' ~ channel)) and 
                    trigger.event.data.new_state.state == '1'
-                 )  
+                 )
               }}
         sequence:
           - variables:
-              scroll_clicks: >
-                {% if (vars['scroll_wheel_mode_ext_' ~ channel] == 'relaxed') and trigger.event.data.new_state.attributes.event_type != 'multi_press_ongoing' %}
-                  {{ trigger.event.data.new_state.attributes.totalNumberOfPressesCounted | int(1) }}
-                {% else %}
-                  1
-                {% endif %}
+              scroll_clicks: 1
               scroll_direction: >
                 {% if (trigger.id == 'scroll_left_' ~ channel) or (trigger.id == 'scroll_left_ext_' ~ channel)%}
                   left
