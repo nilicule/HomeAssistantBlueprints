@@ -67,6 +67,7 @@ variables:
     {% set ns = namespace(batteries=[]) %}
     {% for s in states.sensor %}
       {% if s.attributes.get('device_class') == 'battery'
+         and s.attributes.get('unit_of_measurement') == '%'
          and s.entity_id not in excluded
          and s.state not in ['unavailable', 'unknown', 'none', '']
          and s.state | float(-1) >= 0
