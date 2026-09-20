@@ -3,7 +3,7 @@
 blueprint:
   name: HUE Smarter Button (Multi-press)
   description: |
-    # Philips HUE Smart Button - Multi-press Controller v0.3
+    # Philips HUE Smart Button - Multi-press Controller v0.4
   domain: automation
   input:
     controller_device:
@@ -35,7 +35,7 @@ blueprint:
             - manufacturer: *mfctr1
               <<: &flt-hue3
                 integration: hue
-                model: "Hue smart button (RDM005)"
+                model: "Hue smart button"
             - manufacturer: *mfctr2
               <<: *flt-hue3
             - manufacturer: *mfctr1
