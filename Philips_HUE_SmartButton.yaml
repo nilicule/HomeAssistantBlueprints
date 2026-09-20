@@ -411,13 +411,13 @@ action:
       - conditions:
           - condition: template
             value_template: >-
-              {{ (helper_last_controller_event | length < 1) or state_attr(helper_last_controller_event, 'max') < 500 }}
+              {{ (helper_last_controller_event | length < 1) or state_attr(helper_last_controller_event, 'max') < 200 }}
         sequence:
           - service: persistent_notification.create
             data:
               message: >-
                 Invalid Config: "Helper - Last Controller Event" is not set or too short.
-                Set max length to 500 or more.
+                Set max length to 200 or more.
               title: Philips Hue Smart Button
       - conditions:
           - condition: template
