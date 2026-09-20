@@ -35,7 +35,7 @@ blueprint:
             - manufacturer: *mfctr1
               <<: &flt-hue3
                 integration: hue
-                model: "Hue Smart button (RDM005)"
+                model: "Hue smart button (RDM005)"
             - manufacturer: *mfctr2
               <<: *flt-hue3
             - manufacturer: *mfctr1
